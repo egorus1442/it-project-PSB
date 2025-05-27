@@ -9,7 +9,6 @@ from sqlalchemy import Column, String, create_engine, UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7475775010:AAHSJQd-PX4nJYC22anBl7RW9XQnpleXggg")
 API_URL = os.getenv("RAG_API_URL", "http://localhost:8000")
 DATABASE_URL = os.getenv("SQLITE_DB_PATH", "sqlite:///bot.sqlite")
 
