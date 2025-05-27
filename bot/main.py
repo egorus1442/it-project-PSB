@@ -52,3 +52,52 @@ async def set_thread_id(chat_id: int, thread_id: uuid.UUID):
         session.commit()
     finally:
         session.close()
+
+@dp.message(Command("start"))
+async def cmd_start(message: Message):
+    await message.answer(
+        "Привет! Я телеграм-бот для общения с RAG API.\n"
+        "Просто отправь любое сообщение, и я передам его в API.\n"
+        "Команда /reset сбросит контекст диалога."
+    )
+
+@dp.message(Command("reset"))
+async def cmd_reset(message: Message):
+    chat_id = message.chat.id
+    await set_thread_id(chat_id, uuid.uuid4())
+    await message.answer("Контекст диалога сброшен.")
+
+@dp.message()
+async def handle_message(message: Message):
+    chat_id = message.chat.id
+    question = message.text.strip()
+    if not question:
+        return
+
+    thread_id = await get_thread_id(chat_id)
+    if not thread_id:
+        thread_id = str(uuid.uuid4())
+        await set_thread_id(chat_id, thread_id)
+    request_id = str(uuid.uuid4())
+    payload = {"id": request_id, "question": question, "thread_id": str(thread_id)}
+
+    async with httpx.AsyncClient() as client:
+        try:
+            url = f"{API_URL}/bot/chat?chat_id={chat_id}"
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            return await message.answer(f"HTTP ошибка: {e.response.status_code} - {e.response.text}")
+        except Exception as e:
+            return await message.answer(f"Ошибка при запросе к API: {e}")
+
+    data = response.json()
+    answer = data.get("answer", "")
+
+    await message.answer(answer)
+
+async def main():
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
